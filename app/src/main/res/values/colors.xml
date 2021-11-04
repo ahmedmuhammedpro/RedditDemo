@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="oslo_gray">#888B8D</color>
+    <color name="gallery">#EBEBEB</color>
+    <color name="mine_shaft">#333333</color>
+    <color name="red">#E60000</color>
 </resources>

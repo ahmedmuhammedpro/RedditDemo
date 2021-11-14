@@ -6,6 +6,10 @@ import retrofit2.http.Query
 
 interface PostsRestApi {
 
+    companion object {
+        const val BASE_URL = "https://www.reddit.com/"
+    }
+
     @GET("r/aww/top.json?t=all")
     suspend fun getPosts(@Query("limit") limit: Int = 10, @Query("after") after: String = ""): RemoteFullResponse?
 

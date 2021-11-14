@@ -9,7 +9,11 @@ buildscript {
         couroutines_extension = "2.4.0"
         couroutines_test = "1.5.0"
         navigation = "2.3.5"
-        dagger_version="2.27"
+        dagger_version="2.40"
+        daggerDependencies = [
+                implementation: "com.google.dagger:dagger:$dagger_version",
+                kapt: "com.google.dagger:dagger-compiler:$dagger_version"
+        ]
     }
     repositories {
         google()

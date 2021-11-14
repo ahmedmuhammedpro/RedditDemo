@@ -1,14 +1,18 @@
-package com.ahmed.redditdemo.postslist
+package com.ahmed.redditdemo.main.postslist
 
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.ahmed.redditmodellayer.Repository
 import com.ahmed.redditmodellayer.models.PostsList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class PostsListViewModel(private val repository: Repository) : ViewModel() {
+class PostsListViewModel @Inject constructor (private val repository: Repository) : ViewModel() {
 
     private val _firstPostsStateFlow = MutableStateFlow<Result<PostsList>?>(null)
     val firstPostsStateFlow: StateFlow<Result<PostsList>?> = _firstPostsStateFlow
@@ -37,19 +41,6 @@ class PostsListViewModel(private val repository: Repository) : ViewModel() {
                     _morePostsStateFlow.value = result
                 }
         }
-    }
-
-}
-
-class PostsListViewModelFactory(private val repository: Repository) : ViewModelProvider.Factory {
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(PostsListViewModel::class.java)) {
-            return PostsListViewModel(repository) as T
-        }
-
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 
 }

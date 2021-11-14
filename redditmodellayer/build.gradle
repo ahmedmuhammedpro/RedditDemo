@@ -39,6 +39,9 @@ dependencies {
     implementation "androidx.core:core-ktx:$core_ktx"
     // Timber
     implementation 'com.jakewharton.timber:timber:4.7.1'
+    // Dagger
+    implementation daggerDependencies.implementation
+    kapt daggerDependencies.kapt
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'

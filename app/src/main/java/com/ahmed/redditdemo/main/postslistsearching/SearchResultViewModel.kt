@@ -1,14 +1,18 @@
-package com.ahmed.redditdemo.postslistsearching
+package com.ahmed.redditdemo.main.postslistsearching
 
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.ahmed.redditmodellayer.SearchRepository
 import com.ahmed.redditmodellayer.models.PostsList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class SearchResultViewModel(private val searchRepository: SearchRepository) : ViewModel() {
+class SearchResultViewModel @Inject constructor(private val searchRepository: SearchRepository) : ViewModel() {
 
     private val _searchPostsStateFlow = MutableStateFlow<Result<PostsList>?>(null)
     val searchPostsStateFlow: StateFlow<Result<PostsList>?> = _searchPostsStateFlow
@@ -37,19 +41,6 @@ class SearchResultViewModel(private val searchRepository: SearchRepository) : Vi
                     _morePostsStateFlow.value = result
                 }
         }
-    }
-
-}
-
-class SearchResultViewModelFactory(private val searchRepository: SearchRepository) : ViewModelProvider.Factory {
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(SearchResultViewModel::class.java)) {
-            return SearchResultViewModel(searchRepository) as T
-        }
-
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 
 }

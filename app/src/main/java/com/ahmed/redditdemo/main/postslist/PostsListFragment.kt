@@ -1,80 +1,81 @@
-package com.ahmed.redditdemo.postslistsearching
+package com.ahmed.redditdemo.main.postslist
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ahmed.redditdemo.R
 import com.ahmed.redditdemo.commonadapters.PostsListAdapter
-import com.ahmed.redditdemo.databinding.FragmentSearchResultBinding
-import com.ahmed.redditmodellayer.RepositoryImp
-import com.ahmed.redditmodellayer.SearchRepository
-import com.ahmed.redditmodellayer.local.PostsDatabase
-import com.ahmed.redditmodellayer.remote.PostsApi
+import com.ahmed.redditdemo.databinding.FragmentPostsListBinding
+import com.ahmed.redditdemo.main.MainActivity
+import com.ahmed.redditdemo.main.postslistsearching.SearchResultFragment
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
-class SearchResultFragment : Fragment() {
+class PostsListFragment : Fragment() {
 
-    private var searchTerm: String? = null
-    private lateinit var binding: FragmentSearchResultBinding
-    private lateinit var searchResultViewModel: SearchResultViewModel
+    @Inject
+    lateinit var viewModelFactory: ViewModelProvider.Factory
+    private lateinit var binding: FragmentPostsListBinding
+    private val postsListViewModel by viewModels<PostsListViewModel> { viewModelFactory }
     private var isLoadingMore = false
     private var after: String? = null
+    private var rootView: View? = null
     private val postsListAdapter = PostsListAdapter()
-    private val searchRepository: SearchRepository by lazy {
-        val postsDao = PostsDatabase.getDatabase(requireContext()).postsDao
-        RepositoryImp(PostsApi.getPostsRestApi(), postsDao)
-    }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            searchTerm = it.getString(EXTRA_SEARCH_TERM)
-        }
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        (requireActivity() as MainActivity).postsComponent.inject(this)
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
+    ): View? {
 
-        binding =
-            DataBindingUtil.inflate(inflater, R.layout.fragment_search_result, container, false)
-        searchTerm?.let {
+        if (rootView == null) {
+            binding =
+                DataBindingUtil.inflate(inflater, R.layout.fragment_posts_list, container, false)
             binding.postsListRecyclerView.adapter = postsListAdapter
             setupViewListener()
-            searchResultViewModel = ViewModelProvider(
-                this,
-                SearchResultViewModelFactory(searchRepository)
-            )[SearchResultViewModel::class.java]
-            searchResultViewModel.getSearchPosts(it)
+
+            postsListViewModel.getPosts()
             setupObservers()
+
+            rootView = binding.root
         }
 
-
-        return binding.root
+        return rootView
     }
 
     private fun setupObservers() {
 
         lifecycleScope.launch {
             launch {
-                searchResultViewModel.searchPostsStateFlow.collect { result ->
+                postsListViewModel.firstPostsStateFlow.collect { result ->
                     result?.let {
                         try {
                             val postsList = result.getOrThrow()
                             after = postsList.after
                             postsListAdapter.addNewData(postsList.posts)
                             binding.contentView.visibility = View.VISIBLE
+                            if (postsList.isCached) {
+                                showSnackBar("Can't fetch posts from our server!")
+                            }
                         } catch (ex: Throwable) {
                             binding.errorViewContainer.visibility = View.VISIBLE
                             Timber.e(ex)
@@ -84,14 +85,14 @@ class SearchResultFragment : Fragment() {
             }
 
             launch {
-                searchResultViewModel.morePostsStateFlow.collect { result ->
+                postsListViewModel.morePostsStateFlow.collect { result ->
                     result?.let {
                         try {
                             val postsList = result.getOrThrow()
                             after = if (after != postsList.after) { postsList.after } else { null }
                             postsListAdapter.addNewData(postsList.posts)
                         } catch (ex: Throwable) {
-                            Snackbar.make(binding.root, "Something went wrong!", Snackbar.LENGTH_SHORT).show()
+                            showSnackBar("Something went wrong!")
                             Timber.e(ex)
                         }
 
@@ -102,7 +103,7 @@ class SearchResultFragment : Fragment() {
             }
 
             launch {
-                searchResultViewModel.loadingLiveData.observe(viewLifecycleOwner) {
+                postsListViewModel.loadingLiveData.observe(viewLifecycleOwner) {
                     if (it) {
                         binding.firstLoading.visibility = View.VISIBLE
                         binding.errorViewContainer.visibility = View.GONE
@@ -128,23 +129,61 @@ class SearchResultFragment : Fragment() {
                 if (!after.isNullOrEmpty() && !isLoadingMore && lastVisibleItem == linearLayoutManager.itemCount - 1) {
                     binding.loadMore.visibility = View.VISIBLE
                     isLoadingMore = true
-                    searchResultViewModel.getMoreSearchPosts(searchTerm!!, 10, after!!)
+                    postsListViewModel.getMorePosts(after = after!!)
                 }
             }
         })
+
+        binding.tryAgain.setOnClickListener {
+            postsListViewModel.getPosts()
+        }
+
+        binding.searchEditText.setOnEditorActionListener { v, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                val searchTerm = binding.searchEditText.text.toString()
+                if (searchTerm.isNotEmpty()) {
+                    binding.searchEditText.setText("")
+                    navigateToSearchFragment(searchTerm)
+                    hideKeyboard()
+                }
+                return@setOnEditorActionListener true
+            }
+
+            false
+        }
+
+        binding.searchButton.setOnClickListener {
+            val searchTerm = binding.searchEditText.text.toString()
+            binding.searchEditText.setText("")
+            if (searchTerm.isNotEmpty()) {
+                navigateToSearchFragment(searchTerm)
+                hideKeyboard()
+            }
+        }
+    }
+
+    private fun showSnackBar(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun hideKeyboard() {
+        val inputManager =
+            context?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+        inputManager?.hideSoftInputFromWindow(view?.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+    }
+
+    private fun navigateToSearchFragment(searchTerm: String) {
+        val bundle = Bundle().apply {
+            putString(SearchResultFragment.EXTRA_SEARCH_TERM, searchTerm)
+        }
+        findNavController().navigate(R.id.searchResultFragment, bundle)
     }
 
     companion object {
 
-        const val EXTRA_SEARCH_TERM = "extra_search_term"
-
-        // TODO: Rename and change types and number of parameters
         @JvmStatic
-        fun newInstance(searchTerm: String) =
-            SearchResultFragment().apply {
-                arguments = Bundle().apply {
-                    putString(EXTRA_SEARCH_TERM, searchTerm)
-                }
+        fun newInstance() =
+            PostsListFragment().apply {
             }
     }
 }

@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/postsListFragment"
-        android:name="com.ahmed.redditdemo.postslist.PostsListFragment"
+        android:name="com.ahmed.redditdemo.main.postslist.PostsListFragment"
         tools:layout="@layout/fragment_posts_list" >
         <action
             android:id="@+id/action_postsListFragment_to_searchResultFragment"
@@ -15,7 +15,7 @@
     </fragment>
     <fragment
         android:id="@+id/searchResultFragment"
-        android:name="com.ahmed.redditdemo.postslistsearching.SearchResultFragment"
+        android:name="com.ahmed.redditdemo.main.postslistsearching.SearchResultFragment"
         tools:layout="@layout/fragment_search_result" >
         <action
             android:id="@+id/action_searchResultFragment_to_postsListFragment"
